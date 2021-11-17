@@ -1,5 +1,8 @@
 var conn = require('./../inc/db');
 var menus = require('./../inc/menus');
+var reservations = require('./../inc/reservations');
+var contacts = require('./../inc/contacts');
+var validation = require('./../inc/dataValidation');
 var express = require('express');
 var router = express.Router();
 
@@ -27,6 +30,27 @@ router.get('/contacts', function(req, res, next){
   });
 });
 
+router.post('/contacts', function(req, res, next){
+
+  let isValid = validation.isValidContact(req.body);
+
+  if (isValid !== true) {
+
+    contacts.render(req, res, isValid);
+  } else {
+
+    contacts.save(req.body).then(results => {
+
+      req.body = {};
+      contacts.render(req, res, null, "Mensagem enviada!");
+
+    }).catch(err => {
+
+      contacts.render(req, res, err.message);
+    });
+  }
+});
+
 router.get('/menus', function(req, res, next){
 
   menus.getMenus().then(results => {
@@ -44,17 +68,29 @@ router.get('/menus', function(req, res, next){
 
 router.get('/reservations', function(req, res, next){
 
-  res.render('reservations', { 
-    title: 'Reservas - Restaurante Saboroso!',
-    background: 'images/img_bg_2.jpg',
-    h1: 'Reserve uma mesa!',
-    isHome: false
-  });
+  reservations.render(req, res);
+
 });
 
 router.post('/reservations', function(req, res, next){
 
-  res.send(req.body);
+  let isValid = validation.isValid(req.body);
+
+  if (isValid !== true) {
+
+    reservations.render(req, res, isValid);
+  } else {
+
+    reservations.save(req.body).then(results => {
+
+      req.body = {};
+      reservations.render(req, res, null, "Reserva realizada!");
+
+    }).catch(err => {
+
+      reservations.render(req, res, err.message);
+    });
+  }
 });
 
 router.get('/services', function(req, res, next){
