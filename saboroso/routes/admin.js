@@ -2,6 +2,26 @@ var express = require('express');
 var router = express.Router();
 var users = require('./../inc/users');
 
+router.use(function(req, res, next){
+
+    //cria uma excessão para acessar a rota de login e verifica se o usuário está logado nas outras rotas antes de permitir o acesso
+    if(['/login'].indefOf(req.url) === -1 && !req.session.user){
+
+        res.redirect('/admin/login');
+
+    } else {
+
+        next();
+    }
+});
+
+router.get('/logout', function(req, res, next){
+
+    delete req.session.user;
+
+    res.redirect('/admin/login');
+});
+
 router.get('/', function(req, res, next) {
 
     res.render('admin/index', {
