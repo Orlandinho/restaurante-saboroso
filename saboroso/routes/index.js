@@ -2,6 +2,7 @@ var conn = require('./../inc/db');
 var menus = require('./../inc/menus');
 var reservations = require('./../inc/reservations');
 var contacts = require('./../inc/contacts');
+var emails = require('./../inc/emails');
 var validation = require('./../inc/dataValidation');
 var express = require('express');
 var router = express.Router();
@@ -100,6 +101,18 @@ router.get('/services', function(req, res, next){
     background: 'images/img_bg_1.jpg',
     h1: 'É um prazer poder servir!',
     isHome: false
+  });
+});
+
+router.post('/subscribe', function(req, res, next) {
+
+  emails.save(req).then(results => {
+
+    res.send(results);
+    
+  }).catch(err => {
+
+    res.send(err);
   });
 });
 
