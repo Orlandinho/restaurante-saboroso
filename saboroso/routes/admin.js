@@ -7,266 +7,288 @@ var admin = require('./../inc/admin');
 var contacts = require('./../inc/contacts');
 var emails = require('./../inc/emails');
 var reservations = require('./../inc/reservations');
+const conn = require('../inc/db');
 
-moment.locale("pt-BR");
+module.exports = function(io){
 
-router.use(function(req, res, next){
+    moment.locale("pt-BR");
 
-    //cria uma excessão para acessar a rota de login e verifica se o usuário está logado nas outras rotas antes de permitir o acesso
-    if(['/login'].indexOf(req.url) === -1 && !req.session.user){
+    router.use(function(req, res, next){
 
-        res.redirect('/admin/login');
-
-    } else {
-
+        //cria uma excessão para acessar a rota de login e verifica se o usuário está logado nas outras rotas antes de permitir o acesso
+        if(['/login'].indexOf(req.url) === -1 && !req.session.user){
+    
+            res.redirect('/admin/login');
+    
+        } else {
+    
+            next();
+        }
+    });
+    
+    router.use(function(req, res, next){
+    
+        req.menus = admin.getMenus(req);
+    
         next();
-    }
-});
-
-router.use(function(req, res, next){
-
-    req.menus = admin.getMenus(req);
-
-    next();
-
-});
-
-router.get('/logout', function(req, res, next){
-
-    delete req.session.user;
-
-    res.redirect('/admin/login');
-});
-
-router.get('/', function(req, res, next) {
-
-    admin.dashboard().then(data => {
-
-        res.render('admin/index', admin.getParams(req, {
-
-            data
-        }));
-    }).catch(err => {
-
-        console.log(err);
+    
     });
-
-});
-
-router.get('/contacts', function(req, res, next) {
-
-    contacts.getContacts().then(data => {
-
-        res.render('admin/contacts', admin.getParams(req, {
-            data
-        }));
+    
+    router.get('/logout', function(req, res, next){
+    
+        delete req.session.user;
+    
+        res.redirect('/admin/login');
     });
-});
-
-router.delete('/contacts/:id', function(req, res, next) {
-
-    contacts.delete(req.params.id).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
-    });
-});
-
-router.get('/emails', function(req, res, next) {
-
-    emails.getEmails().then(data => {
-
-        res.render('admin/emails', admin.getParams(req, {
-            data
-        }));
-    });
-});
-
-router.delete('/emails/:id', function(req, res, next) {
-
-    emails.delete(req.params.id).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
-    });
-});
-
-router.get('/login', function(req, res, next) {
-
-    users.render(req, res, null, admin.getParams(req));
-
-});
-
-router.post('/login', function(req, res, next){
-
-    if(!req.body.email){
-
-        users.render(req, res, "Preencha o campo E-MAIL");
-    } else if (!req.body.password) {
-
-        users.render(req, res, "Preencha o campo SENHA");
-    } else {
-
-        users.login(req.body.email, req.body.password).then(user => {
-
-            req.session.user = user;
-
-            res.redirect("/admin");
+    
+    router.get('/', function(req, res, next) {
+    
+        admin.dashboard().then(data => {
+    
+            res.render('admin/index', admin.getParams(req, {
+    
+                data
+            }));
         }).catch(err => {
-
-            users.render(req, res, err.message || err);
-        })
-    }
-
-});
-
-router.get('/menus', function(req, res, next) {
-
-    menus.getMenus().then(data => {
-
-        res.render('admin/menus', admin.getParams(req, {
-
-            data
-        }));
-    }).catch(err => {
-
-        console.log(err);
+    
+            console.log(err);
+        });
+    
     });
-});
-
-router.post('/menus', function(req, res, next) {
-
-    menus.save(req.fields, req.files).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
-    });
-});
-
-router.delete('/menus/:id', function(req, res, next) {
-
-    menus.delete(req.params.id).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
-    });
-})
-
-router.get('/reservations', function(req, res, next) {
-
-    let start = (req.query.start) ? req.query.start : moment().subtract(5,'years').format('YYYY-MM-DD');
-    let end = (req.query.end) ? req.query.end : moment().format('YYYY-MM-DD');
-
-    reservations.getReservations(req).then(pag => {
-
-        res.render('admin/reservations', admin.getParams(req, {
-            date: {
-                start,
-                end
-            },
-            data: pag.data, 
-            moment,
-            links: pag.links
-        }));
-    }).catch(err => {
-
-        console.log(err);
-    });
-});
-
-router.get('/reservations/chart', function(req, res, next){
-
-    req.query.start = (req.query.start) ? req.query.start : moment().subtract(5,'years').format('YYYY-MM-DD');
-    req.query.end = (req.query.end) ? req.query.end : moment().format('YYYY-MM-DD');
-
-    reservations.chart(req).then(chartData => {
-
-        res.send(chartData);
-    });
-});
-
-router.post('/reservations', function(req, res, next) {
-
-    reservations.save(req.fields, req.files).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
-    });
-});
-
-router.delete('/reservations/:id', function(req, res, next) {
-
-    reservations.delete(req.params.id).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
-    });
-})
-
-router.get('/users', function(req, res, next) {
-
-    users.getUsers().then(data => {
-
-        res.render('admin/users', admin.getParams(req, {
-            data
-        }));
-    });
-});
-
-router.post('/users', function(req, res, next) {
-
-    users.save(req.fields, req.files).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
+    
+    router.get('/dashboard', function(req, res, next){
+    
+        reservations.dashboard().then(data => {
+    
+            res.send(data);
+        });
+    
+        
     })
-});
-
-router.post('/users/password-change', function(req, res, next) {
-
-    users.passwordChange(req).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send({
-            error: err
+    
+    router.get('/contacts', function(req, res, next) {
+    
+        contacts.getContacts().then(data => {
+    
+            res.render('admin/contacts', admin.getParams(req, {
+                data
+            }));
         });
     });
-});
-
-router.delete('/users/:id', function(req, res, next) {
-
-    users.delete(req.params.id).then(results => {
-
-        res.send(results);
-
-    }).catch(err => {
-
-        res.send(err);
+    
+    router.delete('/contacts/:id', function(req, res, next) {
+    
+        contacts.delete(req.params.id).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        });
+    });
+    
+    router.get('/emails', function(req, res, next) {
+    
+        emails.getEmails().then(data => {
+    
+            res.render('admin/emails', admin.getParams(req, {
+                data
+            }));
+        });
+    });
+    
+    router.delete('/emails/:id', function(req, res, next) {
+    
+        emails.delete(req.params.id).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        });
+    });
+    
+    router.get('/login', function(req, res, next) {
+    
+        users.render(req, res, null, admin.getParams(req));
+    
+    });
+    
+    router.post('/login', function(req, res, next){
+    
+        if(!req.body.email){
+    
+            users.render(req, res, "Preencha o campo E-MAIL");
+        } else if (!req.body.password) {
+    
+            users.render(req, res, "Preencha o campo SENHA");
+        } else {
+    
+            users.login(req.body.email, req.body.password).then(user => {
+    
+                req.session.user = user;
+    
+                res.redirect("/admin");
+            }).catch(err => {
+    
+                users.render(req, res, err.message || err);
+            })
+        }
+    
+    });
+    
+    router.get('/menus', function(req, res, next) {
+    
+        menus.getMenus().then(data => {
+    
+            res.render('admin/menus', admin.getParams(req, {
+    
+                data
+            }));
+        }).catch(err => {
+    
+            console.log(err);
+        });
+    });
+    
+    router.post('/menus', function(req, res, next) {
+    
+        menus.save(req.fields, req.files).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        });
+    });
+    
+    router.delete('/menus/:id', function(req, res, next) {
+    
+        menus.delete(req.params.id).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        });
     })
-});
+    
+    router.get('/reservations', function(req, res, next) {
+    
+        let start = (req.query.start) ? req.query.start : moment().subtract(5,'years').format('YYYY-MM-DD');
+        let end = (req.query.end) ? req.query.end : moment().format('YYYY-MM-DD');
+    
+        reservations.getReservations(req).then(pag => {
+    
+            res.render('admin/reservations', admin.getParams(req, {
+                date: {
+                    start,
+                    end
+                },
+                data: pag.data, 
+                moment,
+                links: pag.links
+            }));
+        }).catch(err => {
+    
+            console.log(err);
+        });
+    });
+    
+    router.get('/reservations/chart', function(req, res, next){
+    
+        req.query.start = (req.query.start) ? req.query.start : moment().subtract(5,'years').format('YYYY-MM-DD');
+        req.query.end = (req.query.end) ? req.query.end : moment().format('YYYY-MM-DD');
+    
+        reservations.chart(req).then(chartData => {
+    
+            res.send(chartData);
+        });
+    });
+    
+    router.post('/reservations', function(req, res, next) {
+    
+        reservations.save(req.fields, req.files).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        });
+    });
+    
+    router.delete('/reservations/:id', function(req, res, next) {
+    
+        reservations.delete(req.params.id).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        });
+    })
+    
+    router.get('/users', function(req, res, next) {
+    
+        users.getUsers().then(data => {
+    
+            res.render('admin/users', admin.getParams(req, {
+                data
+            }));
+        });
+    });
+    
+    router.post('/users', function(req, res, next) {
+    
+        users.save(req.fields, req.files).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        })
+    });
+    
+    router.post('/users/password-change', function(req, res, next) {
+    
+        users.passwordChange(req).then(results => {
+    
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send({
+                error: err
+            });
+        });
+    });
+    
+    router.delete('/users/:id', function(req, res, next) {
+    
+        users.delete(req.params.id).then(results => {
+    
+            io.emit('dashboard update');
+            res.send(results);
+    
+        }).catch(err => {
+    
+            res.send(err);
+        })
+    });
 
-module.exports = router;
+    return router;
+};
